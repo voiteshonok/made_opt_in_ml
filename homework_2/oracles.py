@@ -1,7 +1,12 @@
+import numpy as np
+import scipy
+
+
 class BaseSmoothOracle(object):
     """
     Base class for implementation of oracles.
     """
+
     def func(self, x):
         """
         Computes the value of function at point x.
@@ -13,7 +18,7 @@ class BaseSmoothOracle(object):
         Computes the gradient at point x.
         """
         raise NotImplementedError('Grad oracle is not implemented.')
-    
+
     def func_directional(self, x, d, alpha):
         """
         Computes phi(alpha) = f(x + alpha*d).
@@ -32,7 +37,7 @@ class QuadraticOracle(BaseSmoothOracle):
     Oracle for quadratic function:
        func(x) = 1/2 x^TAx - b^Tx.
     """
-    
+
     def __init__(self, A, b):
         if not scipy.sparse.isspmatrix_dia(A) and not np.allclose(A, A.T):
             raise ValueError('A should be a symmetric matrix.')
@@ -40,12 +45,12 @@ class QuadraticOracle(BaseSmoothOracle):
         self.b = b
 
     def func(self, x):
-        # your code here
+        return 1 / 2 * x.T.dot(self.A).dot(x) - self.b.T.dot(x)
 
     def grad(self, x):
-        # your code here
+        return self.A.dot(x) - self.b
 
-        
+
 class LogRegL2Oracle(BaseSmoothOracle):
     """
     Oracle for logistic regression with l2 regularization:
@@ -62,6 +67,7 @@ class LogRegL2Oracle(BaseSmoothOracle):
         matmat_ATsA : function
             Computes matrix-matrix-matrix product A^T * Diag(s) * A,
     """
+
     def __init__(self, matvec_Ax, matvec_ATx, matmat_ATsA, b, regcoef):
         self.matvec_Ax = matvec_Ax
         self.matvec_ATx = matvec_ATx
@@ -70,10 +76,11 @@ class LogRegL2Oracle(BaseSmoothOracle):
         self.regcoef = regcoef
 
     def func(self, x):
-        # your code here
+        return 1 / self.b.size * np.sum(
+            np.log(1 + np.exp(-self.b * (self.matvec_Ax(x))))) + self.regcoef / 2 * x.T.dot(x)
 
     def grad(self, x):
-        # your code here
+        return -1 / self.b.size * self.matvec_ATx(self.b / (1 + np.exp(self.b * self.matvec_Ax(x)))) + self.regcoef * x
 
 
 def create_log_reg_oracle(A, b, regcoef):
@@ -81,11 +88,10 @@ def create_log_reg_oracle(A, b, regcoef):
     Auxiliary function for creating logistic regression oracles.
         `oracle_type` must be either 'usual' or 'optimized'
     """
-    matvec_Ax = lambda x: x  # your code here
-    matvec_ATx = lambda x: x  # your code here
+    matvec_Ax = lambda x: A.dot(x)
+    matvec_ATx = lambda x: A.T.dot(x)
 
     def matmat_ATsA(s):
-        # your code here
-        return None
+        return A.T.dot(s).dot(A)
 
     return LogRegL2Oracle(matvec_Ax, matvec_ATx, matmat_ATsA, b, regcoef)
