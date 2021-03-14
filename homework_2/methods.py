@@ -1,5 +1,6 @@
 import numpy as np
 import scipy
+import time
 from collections import defaultdict
 from scipy.optimize.linesearch import scalar_search_wolfe2
 
@@ -122,7 +123,11 @@ class GradientDescent(object):
         self.tolerance = tolerance
         self.line_search_tool = get_line_search_tool(line_search_options)
         self.hist = defaultdict(list)
-        # maybe more of your code here
+        self.hist["time"] = []
+        self.hist["func"] = []
+        self.hist["grad_norm"] = []
+        self.hist["x"] = []
+        # self.hist["x_star"] = []
 
     def run(self, max_iter=100):
         """
@@ -139,4 +144,24 @@ class GradientDescent(object):
             - self.hist['x'] : list of np.arrays, containing the trajectory of the algorithm. ONLY STORE IF x.size <= 2
             - self.hist['x_star']: np.array containing x at last iteration
         """
-        # your code here
+        start_time = time.time()
+        grad_x_0 = self.oracle.grad(self.x_0)
+        x_k = self.x_0.copy()
+
+        for k in range(max_iter + 1):
+            self.hist["time"].append(time.time() - start_time)
+            self.hist["func"].append(self.oracle.func(x_k))
+            grad_x_k = self.oracle.grad(x_k)
+            self.hist["grad_norm"].append(np.sqrt(grad_x_k.dot(grad_x_k)))
+
+            if grad_x_k.dot(grad_x_k) <= grad_x_0.dot(grad_x_0) * self.tolerance:
+                break
+
+            alpha = self.line_search_tool.line_search(self.oracle, x_k, -grad_x_k)
+
+            if grad_x_k.size <= 2:
+                self.hist["x"].append(-alpha * grad_x_k)
+
+            x_k = x_k - alpha * grad_x_k
+
+        self.hist["x_star"] = x_k
