@@ -146,6 +146,7 @@ class GradientDescent(object):
         """
         start_time = time.time()
         grad_x_0 = self.oracle.grad(self.x_0)
+        grad_x_0_norm = grad_x_0.dot(grad_x_0)
         x_k = self.x_0.copy()
 
         for k in range(max_iter + 1):
@@ -154,7 +155,7 @@ class GradientDescent(object):
             grad_x_k = self.oracle.grad(x_k)
             self.hist["grad_norm"].append(np.sqrt(grad_x_k.dot(grad_x_k)))
 
-            if grad_x_k.dot(grad_x_k) <= grad_x_0.dot(grad_x_0) * self.tolerance:
+            if grad_x_k.dot(grad_x_k) <= grad_x_0_norm * self.tolerance:
                 break
 
             alpha = self.line_search_tool.line_search(self.oracle, x_k, -grad_x_k)
